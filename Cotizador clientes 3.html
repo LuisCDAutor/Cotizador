@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Cotizaciones</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #8a2be2; /* Violeta */
+    }
+
+    @media print {
+      .no-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body class="bg-purple-600 font-sans text-white">
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold text-center mb-6">Generador de Cotizaciones</h1>
+
+    <!-- Formulario principal -->
+    <form id="quoteForm" class="bg-white p-6 rounded-lg shadow-md text-black">
+      <!-- Datos del cliente -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label for="clientName" class="block text-sm font-medium text-gray-700">Nombre o Razón Social</label>
+          <input type="text" id="clientName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+        </div>
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+          <input type="email" id="email" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label for="identification" class="block text-sm font-medium text-gray-700">Identificación (Cédula, NIT u Otro)</label>
+          <input type="text" id="identification" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+        </div>
+        <div>
+          <label for="legalRep" class="block text-sm font-medium text-gray-700">Nombre del Representante Legal</label>
+          <input type="text" id="legalRep" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label for="phone" class="block text-sm font-medium text-gray-700">Teléfono</label>
+          <input type="text" id="phone" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+        </div>
+        <div>
+          <label for="legalRepId" class="block text-sm font-medium text-gray-700">Identificación del Representante Legal</label>
+          <input type="text" id="legalRepId" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+        </div>
+      </div>
+
+      <!-- Líneas de productos o servicios -->
+      <div id="itemsContainer">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 item-row">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Servicio a Cotizar</label>
+            <input type="text" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm service-name" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Cantidad</label>
+            <input type="number" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm quantity" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Valor Unitario</label>
+            <input type="number" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm unit-price" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">IVA</label>
+            <input type="checkbox" class="mt-1 block w-full h-5 w-5 text-blue-600 apply-iva">
+          </div>
+          <button type="button" class="mt-6 bg-red-500 text-white py-2 px-4 rounded-md delete-item no-print">Eliminar</button>
+        </div>
+      </div>
+
+      <!-- Botón para agregar nueva línea -->
+      <button type="button" id="addItemButton" class="bg-blue-500 text-white py-2 px-4 rounded-md mb-4 no-print">
+        Agregar Línea
+      </button>
+
+      <!-- Resumen de totales -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Subtotal</label>
+          <input type="text" id="subtotal" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" readonly>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">IVA</label>
+          <input type="text" id="iva" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" readonly>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Total</label>
+          <input type="text" id="total" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" readonly>
+        </div>
+      </div>
+
+      <!-- Notas o condiciones especiales -->
+      <div class="mb-4">
+        <label for="notes" class="block text-sm font-medium text-gray-700">Observaciones</label>
+        <textarea id="notes" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="flex justify-between">
+        <button type="button" id="generatePDFButton" class="bg-green-500 text-white py-2 px-4 rounded-md no-print">
+          Generar PDF
+        </button>
+        <button type="button" id="printButton" class="bg-indigo-500 text-white py-2 px-4 rounded-md no-print">
+          Imprimir
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Script principal -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const itemsContainer = document.getElementById('itemsContainer');
+      const addItemButton = document.getElementById('addItemButton');
+      const subtotalInput = document.getElementById('subtotal');
+      const ivaInput = document.getElementById('iva');
+      const totalInput = document.getElementById('total');
+
+      // Función para calcular totales
+      function calculateTotals() {
+        let subtotal = 0;
+        let iva = 0;
+
+        document.querySelectorAll('.item-row').forEach(row => {
+          const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+          const unitPrice = parseFloat(row.querySelector('.unit-price').value) || 0;
+          const applyIva = row.querySelector('.apply-iva').checked;
+
+          const lineTotal = quantity * unitPrice;
+          subtotal += lineTotal;
+
+          if (applyIva) {
+            iva += lineTotal * 0.16; // Suponiendo IVA del 16%
+          }
+        });
+
+        const total = subtotal + iva;
+
+        subtotalInput.value = subtotal.toFixed(2);
+        ivaInput.value = iva.toFixed(2);
+        totalInput.value = total.toFixed(2);
+      }
+
+      // Agregar nueva línea
+      addItemButton.addEventListener('click', () => {
+        const newRow = document.querySelector('.item-row').cloneNode(true);
+        newRow.querySelectorAll('input').forEach(input => input.value = '');
+        newRow.querySelector('.apply-iva').checked = false;
+        newRow.querySelector('.delete-item').addEventListener('click', () => newRow.remove());
+        itemsContainer.appendChild(newRow);
+        calculateTotals();
+      });
+
+      // Eliminar línea
+      document.querySelectorAll('.delete-item').forEach(button => {
+        button.addEventListener('click', () => button.closest('.item-row').remove());
+        calculateTotals();
+      });
+
+      // Calcular totales al cambiar valores
+      itemsContainer.addEventListener('input', calculateTotals);
+
+      // Imprimir cotización
+      document.getElementById('printButton').addEventListener('click', () => {
+        window.print();
+      });
+
+      // Generar PDF con diseño personalizado
+      document.getElementById('generatePDFButton').addEventListener('click', () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Encabezado
+        doc.setFontSize(14);
+        doc.text("Referencia: Invitación a Cotizar No. SIP-007-2023-FENOGE", 10, 10);
+        doc.text("Anexo 1 - Formato de cotización", 10, 15);
+
+        // Datos del cliente
+        doc.setFontSize(12);
+        doc.text(`Nombre o Razón Social: ${document.getElementById('clientName').value}`, 10, 25);
+        doc.text(`Correo Electrónico: ${document.getElementById('email').value}`, 10, 30);
+        doc.text(`Identificación: ${document.getElementById('identification').value}`, 10, 35);
+        doc.text(`Representante Legal: ${document.getElementById('legalRep').value}`, 10, 40);
+
+        // Tabla de servicios
+        const columns = ["Ítem", "Servicios a Cotizar", "Cantidad", "Valor Total", "Valor Unitario"];
+        const rows = [];
+        let i = 1;
+
+        document.querySelectorAll('.item-row').forEach(row => {
+          const serviceName = row.querySelector('.service-name').value;
+          const quantity = row.querySelector('.quantity').value;
+          const unitPrice = row.querySelector('.unit-price').value;
+          const applyIva = row.querySelector('.apply-iva').checked;
+          const lineTotal = (quantity * unitPrice).toFixed(2);
+
+          rows.push([i++, serviceName, quantity, `$${lineTotal}`, `$${unitPrice}`]);
+        });
+
+        doc.autoTable({
+          head: [columns],
+          body: rows,
+          startY: 50,
+        });
+
+        // Totales
+        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.text(`Subtotal: $${subtotalInput.value}`, 10, finalY);
+        doc.text(`IVA: $${ivaInput.value}`, 10, finalY + 5);
+        doc.text(`Total: $${totalInput.value}`, 10, finalY + 10);
+
+        // Guardar PDF
+        doc.save('cotizacion.pdf');
+      });
+
+      // Cargar jsPDF dinámicamente
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      document.body.appendChild(script);
+    });
+  </script>
+</body>
+</html>
